@@ -4,7 +4,6 @@ on: [push, pull_request]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -23,6 +22,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install black flake8 pytest
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -e .
 
       - name: Format with black
         uses: psf/black@stable
