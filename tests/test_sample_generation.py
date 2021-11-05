@@ -4,7 +4,7 @@ from re import escape
 import numpy as np
 import pandas as pd
 
-from multimulti.sample_generation import (
+from multimulti_helpers.sample_generation import (
     _check_y_labels_min_counts,
     _generate_minimal_sample_indices,
 )
