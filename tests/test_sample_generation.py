@@ -78,8 +78,8 @@ class Test_GenerateMinimalSampleIndices(object):
                 _generate_minimal_sample_indices(y_labels=y_labels_2, min_count=1)
             )
             expected = {5, 6}
-            msg = f"'{func_name}' returned {actual}, expected value shoud be in"
-            +" {expected}."
+            msg = f"'{func_name}' returned {actual}, expected value shoud be"
+            f" in {expected}."
             assert actual.issubset(expected), msg
         except Exception as exc:
             assert False, f"'{func_name}' raised an exception '{exc}'"
