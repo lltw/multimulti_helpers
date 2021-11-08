@@ -1,4 +1,4 @@
-# multimulti_helpers
+# MultiMulti helpers
 
 ![](https://github.com/lltw/multimulti_helpers/actions/workflows/format-lint-and-test.yaml/badge.svg)
 [![Coverage](https://codecov.io/github/lltw/multimulti_helpers/coverage.svg?branch=main)](https://codecov.io/gh/lltw/multimulti_helpers)

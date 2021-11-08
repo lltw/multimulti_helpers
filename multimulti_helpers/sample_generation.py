@@ -3,7 +3,7 @@ import numpy.typing as npt
 import pandas as pd
 
 
-def _check_y_labels_min_counts(y_labels: npt.ArrayLike, min_count: int = 5) -> None:
+def _check_y_labels_min_counts(y_labels: npt.ArrayLike, min_count: int = 5) -> bool:
     """
     Checks if each binary class in y_lables has at least min_count instances,
     if not raises a ValueError.
@@ -31,6 +31,8 @@ def _check_y_labels_min_counts(y_labels: npt.ArrayLike, min_count: int = 5) -> N
             + " of y_labels have not enough (less than min_count) instances"
             + " of their respective classes."
         )
+
+    return True
 
 
 def _generate_minimal_sample_indices(
