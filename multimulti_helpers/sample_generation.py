@@ -3,10 +3,120 @@ import numpy.typing as npt
 import pandas as pd
 
 
-def _check_y_labels_min_counts(y_labels: npt.ArrayLike, min_count: int = 5) -> bool:
+def _check_if_y_labels_type_is_valid(y_labels: npt.ArrayLike) -> None:
+    """
+    Checks if y_label is valid pd.DataFrame or np.ndarray.
+
+    Valid pd.DataFrame is non-empty and it's columns are of dtypes "category" or
+    "int64". Valid np.ndarray is 2-D and of dtype "int64".
+
+    Parameters
+    ----------
+    y_labels: array_like
+
+    Raises
+    ------
+    TypeError
+        If the y_label is not non-empty pd.DataFrame which columns are of dtypes
+        "category" or "int64", or 2-D np.ndarray of dtype "int64"
+    """
+    is_valid_df = (
+        isinstance(y_labels, pd.DataFrame)
+        and (not y_labels.empty)
+        and set(x.name for x in y_labels.dtypes).issubset({"category", "int64"})
+    )
+    is_valid_ndarray = (
+        isinstance(y_labels, np.ndarray)
+        and (len(y_labels.shape) == 2)
+        and y_labels.dtype.name == "int64"
+    )
+
+    if not (is_valid_df or is_valid_ndarray):
+        raise TypeError(
+            "y_labels must be a non-empty pd.DataFrame with columns of dtypes"
+            + " 'category' or 'int', or a 2-D np.ndarray of dtype 'int64'."
+        )
+
+
+def _check_if_y_labels_is_binary(y_labels: npt.ArrayLike) -> None:
+    """
+    Checks if y_labels is a 2-D np.ndarray consisting only of 0's and 1's.
+
+    Parameters
+    ----------
+    y_labels: array_like
+
+    Raises
+    ------
+    ValueError
+        If the y_label is not or 2-D np.ndarray of dtype "int64" consisting only
+        of of 0's and 1's.
+    """
+    if not set(np.unique(y_labels).astype(int)).issubset({0, 1}):
+        raise ValueError(
+            "y_labels must a 2-D np.ndarray consisting only of 0's and 1's."
+        )
+
+
+def _check_sample_size(
+    y_labels: npt.ArrayLike, size: float or int, min_count: int
+) -> None:
+    """
+    If size =< 1, converts it to floor of size times number of rows in y_labels.
+    Checks if specified size is equal to or greater than min_count times number of rows
+    in y_labels.
+
+    Parameters
+    ----------
+    y_labels: array_like
+        2-D np.ndarray consisting only of 0's and 1's
+    size: float
+        Size of a sample. Sizes <= 1 are treated as fractions of original sample size.
+        Should be at least min_count times number of columns in the original data.
+    min_count: int, default: 5
+        Minimum count of instances of each binary class to be insured in a sample.
+
+    Returns:
+    int
+        size of sample
+
+    Raises
+    ------
+    ValueError
+        If size < min_count * y_label.shape[1]
+    """
+
+    if size <= 1:
+        size = np.floor(len(y_labels) * size)
+
+    if size < min_count * y_labels.shape[1]:
+        raise ValueError(
+            f"Sample size ({size}) is to small to always ensure min_count instances of"
+            + " each binary class. Sample size should be at least"
+            + f" {min_count * y_labels.shape[1]} (min_count ({min_count}) * number"
+            + f" of different classes ({y_labels.shape[1]}))."
+        )
+
+    return size
+
+
+def _check_y_labels_min_counts(y_labels: npt.ArrayLike, min_count: int = 5) -> None:
     """
     Checks if each binary class in y_lables has at least min_count instances,
     if not raises a ValueError.
+
+    Parameters
+    ----------
+    y_labels: array_like
+        2-D np.ndarray of 0's and 1's representing multiple binary classes (each column
+        is a binary class)
+    min_count: int, default: 5
+        Minimum count of instances of each binary class to be insured in a sample.
+
+    Raises:
+    -------
+    ValueError
+        If there is at least one class in y_labels with less than min_count.
     """
 
     # check if each binary class in y_lables np.ndarray has at least min_count
@@ -17,6 +127,7 @@ def _check_y_labels_min_counts(y_labels: npt.ArrayLike, min_count: int = 5) -> b
         if column.sum() < min_count:
             underrepresented_classes.append(i)
 
+    # if there are underrepresented classes, throw an error
     if len(underrepresented_classes) == 1:
         raise ValueError(
             "Column "
@@ -31,8 +142,6 @@ def _check_y_labels_min_counts(y_labels: npt.ArrayLike, min_count: int = 5) -> b
             + " of y_labels have not enough (less than min_count) instances"
             + " of their respective classes."
         )
-
-    return True
 
 
 def _generate_minimal_sample_indices(
@@ -72,9 +181,8 @@ def _generate_minimal_sample_indices(
 
 def multilabel_sample(
     y_labels: npt.ArrayLike,
-    size: float = 1000.0,
+    size: float or int = 1000,
     min_count: int = 5,
-    min_size_min_count_times: int = 100,
     seed: int = None,
 ) -> npt.NDArray[np.int_]:
     """
@@ -87,16 +195,13 @@ def multilabel_sample(
     ----------
     y_labels: array_like
         2-D array (pd.DataFrame or np.ndarray) of 0's and 1's representing multiple
-        binary classes (column is a binary class)
+        binary classes (each column is a binary class)
     size: float, default: 1000
         Size of a sample. Sizes <= 1 are treated as fractions of original sample size.
         Should be at least min_size_min_count_times greater than min_count times number
         of columns in the original data.
     min_count: int, default: 5
         Minimum count of instances of each binary class to be insured in a sample.
-    min_size_min_count_times: int, default: 5
-        Coefficient to control for minimum sample size. Sample size should be >=
-        min_size_min_count_times * (min_count * number of columns in the original data).
     seed: int, default: None
         Seed for random sampling.
 
@@ -104,45 +209,20 @@ def multilabel_sample(
     -------
     ndarray
         Sorted 1d ndarray of sample indices.
-
-    Raises
-    ------
-    TypeError
-        If the y_label is not of type pd.DataFrame or np.ndarray
-
-    ValueError
-        If y_labels is not a of 0's and 1's
-
-    ValueError
-        If size < min_size_min_count_times * min_count * y_label.shape[1]
     """
 
-    # check if y_labels is pd.DataFrame or np.ndarray
-    if not (isinstance(y_labels, pd.DataFrame) or isinstance(y_labels, np.ndarray)):
-        raise TypeError("y_label must be of type pd.DataFrame or np.ndarray")
-
-    # check if y_labels is binary
-    if set(np.unique(y_labels).astype(int)) not in {0, 1}:
-        raise ValueError("y_labels must be a matrix of 0's and 1's")
+    # check if y_labels is a valid pd.DataFrame or np.ndarray
+    _check_if_y_labels_type_is_valid(y_labels)
 
     # if y_labels is pd.DataFrame, convert it to ndarray
     if isinstance(y_labels, pd.DataFrame):
         y_labels = y_labels.to_numpy()
 
-    # convert size to integer
-    if size <= 1:
-        size = np.floor(len(y_labels) * size)
+    # check if y_labels is binary
+    _check_if_y_labels_is_binary(y_labels)
 
-    # check if size isn't too small
-    msg = (
-        f"Specified sample size {size} is less than min_size_min_count_times"
-        + f" ({min_size_min_count_times}) * min_count ({min_count})"
-        + f" * number of different classes ({y_labels.shape[1]})"
-        + f" = {min_size_min_count_times * min_count * y_labels.shape[1]}."
-    )
-
-    if size < min_size_min_count_times * min_count * y_labels.shape[1]:
-        raise ValueError(msg)
+    # check if size isn't too small and convert it to the integer
+    size = _check_sample_size(size, min_count, y_labels)
 
     # check if each class in y_lables has at least min_count instances
     _check_y_labels_min_counts(y_labels, min_count)
@@ -154,7 +234,7 @@ def multilabel_sample(
     # generate sample indices:
     # step I: ensure count of each label >= `min_count`
     ensured_sample_idx = _generate_minimal_sample_indices(
-        y_labels=y_labels, min_count=min_count, seed=seed
+        y_labels=y_labels, min_count=min_count, rng=rng
     )
 
     # step II: generate remaining indices
