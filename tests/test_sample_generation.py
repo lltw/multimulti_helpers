@@ -78,8 +78,10 @@ class Test_Checks(object):
     )
 
     @pytest.mark.parametrize(
-        "y_labels, expectation",
+        "y_labels, expected",
         [
+            (y_labels_1, does_not_raise()),
+            (y_labels_2, does_not_raise()),
             (None, type_error),
             (list(), type_error),
             ([[0, 1, 1], [0, 0, 1]], type_error),
@@ -95,10 +97,10 @@ class Test_Checks(object):
             (np.array([[0, 1.0, 1], [0, 1, 0]]), type_error),  # Wrong type np.ndarray
         ],
     )
-    def test_wrong_types(self, y_labels, expectation):
+    def test_wrong_types(self, y_labels, expected):
         func_name = _validate_y_labels_type.__name__
         try:
-            with expectation:
+            with expected:
                 _validate_y_labels_type(y_labels)
         except Exception as exc:
             exc_name = exc.__class__.__name__
@@ -110,17 +112,17 @@ class Test_Checks(object):
     )
 
     @pytest.mark.parametrize(
-        "y_labels, expectation",
+        "y_labels, expected",
         [
             (y_labels_1, does_not_raise()),
             (y_labels_2, does_not_raise()),
             (np.array([[1, 2], [0, 1]]), value_error_not_binary),
         ],
     )
-    def test_not_binary(self, y_labels, expectation):
+    def test_not_binary(self, y_labels, expected):
         func_name = _check_if_y_labels_is_binary.__name__
         try:
-            with expectation:
+            with expected:
                 _check_if_y_labels_is_binary(y_labels)
         except Exception as exc:
             exc_name = exc.__class__.__name__
@@ -138,7 +140,7 @@ class Test_Checks(object):
     )
 
     @pytest.mark.parametrize(
-        "y_labels, size, min_count, expectation",
+        "y_labels, size, min_count, expected",
         [
             (y_labels_1, 3, 1, does_not_raise()),  # Marginal
             (y_labels_1, 6, 2, does_not_raise()),
@@ -177,17 +179,17 @@ class Test_Checks(object):
             ),
         ],
     )
-    def test_wrong_size(self, y_labels, size, min_count, expectation):
+    def test_wrong_size(self, y_labels, size, min_count, expected):
         func_name = _validate_sample_size.__name__
         try:
-            with expectation:
+            with expected:
                 _validate_sample_size(y_labels, size, min_count)
         except Exception as exc:
             exc_name = exc.__class__.__name__
             assert False, f"'{func_name}' raised an exception {exc_name} '{exc}'"
 
     @pytest.mark.parametrize(
-        "y_labels,min_count,expectation",
+        "y_labels,min_count,expected",
         [
             (y_labels_1, 1, does_not_raise()),
             (y_labels_2, 1, does_not_raise()),
@@ -226,10 +228,10 @@ class Test_Checks(object):
             ),
         ],
     )
-    def test_underrepresented_classes_in_y(self, y_labels, min_count, expectation):
+    def test_underrepresented_classes_in_y(self, y_labels, min_count, expected):
         func_name = _check_y_labels_min_counts.__name__
         try:
-            with expectation:
+            with expected:
                 _check_y_labels_min_counts(y_labels, min_count)
         except Exception as exc:
             exc_name = exc.__class__.__name__

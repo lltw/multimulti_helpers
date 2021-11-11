@@ -37,7 +37,7 @@ def _validate_y_labels_type(y_labels: npt.ArrayLike) -> npt.NDArray[np.int_]:
         isinstance(y_labels, np.ndarray)
         and (len(y_labels.shape) == 2)
         and y_labels.dtype.name == "int64"
-        and (np.concatenate(np.isnan(y_labels)) == 0)
+        and (sum(np.concatenate(np.isnan(y_labels))) == 0)
     )
 
     if not (is_valid_df or is_valid_ndarray):
