@@ -3,39 +3,54 @@ import numpy.typing as npt
 import pandas as pd
 
 
-def _check_if_y_labels_type_is_valid(y_labels: npt.ArrayLike) -> None:
+def _validate_y_labels_type(y_labels: npt.ArrayLike) -> npt.NDArray[np.int_]:
     """
     Checks if y_label is valid pd.DataFrame or np.ndarray.
 
-    Valid pd.DataFrame is non-empty and it's columns are of dtypes "category" or
-    "int64". Valid np.ndarray is 2-D and of dtype "int64".
+    Valid pd.DataFrame is non-empty, it's columns are of dtypes "category" or
+    "int64" and has no missing values. Valid np.ndarray is 2-D, of dtype "int64"
+    and has no missing values.
 
     Parameters
     ----------
     y_labels: array_like
 
+    Returnes
+    --------
+    np.ndarray
+        2-D np.ndarray dtype "int64"
+
     Raises
     ------
     TypeError
-        If the y_label is not non-empty pd.DataFrame which columns are of dtypes
-        "category" or "int64", or 2-D np.ndarray of dtype "int64"
+        If the y_label is not non-empty pd.DataFrame, with no missing values, which
+        columns are of dtypes "category" or "int64", or 2-D np.ndarray of dtype "int64"
+        with no missing values.
     """
     is_valid_df = (
         isinstance(y_labels, pd.DataFrame)
         and (not y_labels.empty)
+        and (y_labels.isna().any().sum() == 0)
         and set(x.name for x in y_labels.dtypes).issubset({"category", "int64"})
     )
     is_valid_ndarray = (
         isinstance(y_labels, np.ndarray)
         and (len(y_labels.shape) == 2)
         and y_labels.dtype.name == "int64"
+        and (np.concatenate(np.isnan(y_labels)) == 0)
     )
 
     if not (is_valid_df or is_valid_ndarray):
         raise TypeError(
-            "y_labels must be a non-empty pd.DataFrame with columns of dtypes"
-            + " 'category' or 'int', or a 2-D np.ndarray of dtype 'int64'."
+            "y_labels must have no missing values and be a non-empty pd.DataFrame"
+            + " with columns of dtypes 'category' or 'int', or a 2-D np.ndarray of"
+            + " dtype 'int64'."
         )
+
+    if isinstance(y_labels, pd.DataFrame):
+        y_labels = y_labels.to_numpy(dtype="int64")
+
+    return y_labels
 
 
 def _check_if_y_labels_is_binary(y_labels: npt.ArrayLike) -> None:
@@ -58,9 +73,9 @@ def _check_if_y_labels_is_binary(y_labels: npt.ArrayLike) -> None:
         )
 
 
-def _check_sample_size(
+def _validate_sample_size(
     y_labels: npt.ArrayLike, size: float or int, min_count: int
-) -> None:
+) -> int:
     """
     If size =< 1, converts it to floor of size times number of rows in y_labels.
     Checks if specified size is equal to or greater than min_count times number of rows
@@ -83,11 +98,11 @@ def _check_sample_size(
     Raises
     ------
     ValueError
-        If size < min_count * y_label.shape[1]
+        If size < min_count * y_label.shape[1] or if size > y_labels.shape[0]
     """
 
     if size <= 1:
-        size = np.floor(len(y_labels) * size)
+        size = int(np.floor(len(y_labels) * size))
 
     if size < min_count * y_labels.shape[1]:
         raise ValueError(
@@ -95,6 +110,11 @@ def _check_sample_size(
             + " each binary class. Sample size should be at least"
             + f" {min_count * y_labels.shape[1]} (min_count ({min_count}) * number"
             + f" of different classes ({y_labels.shape[1]}))."
+        )
+    elif size > y_labels.shape[0]:
+        raise ValueError(
+            f"Sample size ({size}) exceeds that number of rows in"
+            + f" original data ({y_labels.shape[0]}). "
         )
 
     return size
@@ -212,17 +232,14 @@ def multilabel_sample(
     """
 
     # check if y_labels is a valid pd.DataFrame or np.ndarray
-    _check_if_y_labels_type_is_valid(y_labels)
-
     # if y_labels is pd.DataFrame, convert it to ndarray
-    if isinstance(y_labels, pd.DataFrame):
-        y_labels = y_labels.to_numpy()
+    y_labels = _validate_y_labels_type(y_labels)
 
     # check if y_labels is binary
     _check_if_y_labels_is_binary(y_labels)
 
     # check if size isn't too small and convert it to the integer
-    size = _check_sample_size(size, min_count, y_labels)
+    size = _validate_sample_size(y_labels, size, min_count)
 
     # check if each class in y_lables has at least min_count instances
     _check_y_labels_min_counts(y_labels, min_count)
