@@ -276,4 +276,40 @@ class Test_GenerateMinimalSampleIndices(object):
 
 
 class Test_MultilabelSample(object):
-    pass
+    @pytest.mark.parametrize(
+        "y_labels, size, min_count, seed, expected",
+        [
+            (y_labels_1, 0.5, 2, 42, np.array([1, 2, 7, 8, 9, 10, 11])),
+            (y_labels_1, 8, 2, 42, np.array([0, 1, 2, 7, 8, 9, 10, 11])),
+        ],
+    )
+    def test_multilabel_sample_with_seed(
+        self, y_labels, size, min_count, seed, expected
+    ):
+        func_name = multilabel_sample.__name__
+        try:
+            actual = multilabel_sample(y_labels, size, min_count, seed)
+            msg = f"'{func_name}' returned {actual}, expected {expected}."
+            assert np.array_equal(actual, expected), msg
+        except Exception as exc:
+            exc_name = exc.__class__.__name__
+            assert False, f"'{func_name}' raised an exception {exc_name} '{exc}'"
+
+    @pytest.mark.parametrize(
+        "y_labels, size, min_count, expected_size",
+        [
+            (y_labels_1, 0.6, 2, 8),
+            (y_labels_1, 10, 2, 10),
+        ],
+    )
+    def test_multilabel_sample_without_seed(
+        self, y_labels, size, min_count, expected_size
+    ):
+        func_name = multilabel_sample.__name__
+        try:
+            actual = multilabel_sample(y_labels, size, min_count, seed=None)
+            assert actual.shape[0] == expected_size
+            assert _check_y_labels_min_counts(y_labels_1[actual], min_count) is None
+        except Exception as exc:
+            exc_name = exc.__class__.__name__
+            assert False, f"'{func_name}' raised an exception {exc_name} '{exc}'"
